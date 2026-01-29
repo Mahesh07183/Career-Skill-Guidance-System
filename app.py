@@ -2,7 +2,6 @@ from flask import Flask, jsonify, render_template, request
 import pandas as pd
 import os
 
-
 # ---------------------------------
 # Flask app initialization
 # ---------------------------------
@@ -110,21 +109,23 @@ def derive_skills_from_subjects(subjects):
 # ---------------------------------
 # ROUTES
 # ---------------------------------
+
+# UI home page
 @app.route("/")
 def home():
-    return jsonify({
-        "message": "Career Skill Guidance System is running",
-        "port": 5000
-    })
-
-@app.route("/ui")
-def ui():
     return render_template("index.html")
 
+# API health check
+@app.route("/health")
+def health():
+    return jsonify({
+        "status": "Career Skill Guidance System is running"
+    })
+
+# API recommendation (JSON)
 @app.route("/recommend")
 def recommend():
-    # simulate a completed student (first record)
-    user = df.iloc[0]
+    user = df.iloc[0]  # simulate a completed student
 
     career = user["career_aspiration"].lower()
     strong_subjects = get_strong_subjects(user)
@@ -140,26 +141,35 @@ def recommend():
         "skills_to_learn_next": skills_to_learn
     })
 
+# UI recommendation
 @app.route("/recommend_ui")
 def recommend_ui():
     career = request.args.get("career", "").lower()
-    
-    if not career:
-        return render_template("index.html", error="Please enter a career aspiration")
 
-    user = df.iloc[0]  # simulate a completed student
+    if not career:
+        return render_template(
+            "index.html",
+            error="Please enter a career aspiration"
+        )
+
+    user = df.iloc[0]
     strong_subjects = get_strong_subjects(user)
     current_skills = derive_skills_from_subjects(strong_subjects)
 
     required_skills = career_skill_map.get(career, [])
-    
+
     if not required_skills:
         return render_template(
             "index.html",
             career=career,
-            error=f"Career '{career}' not found in the system. Try: data scientist, software engineer, analyst, researcher, doctor, lawyer, teacher, scientist, business owner, government officer, artist"
+            error=(
+                f"Career '{career}' not found. Try: "
+                "data scientist, software engineer, analyst, researcher, "
+                "doctor, lawyer, teacher, scientist, business owner, "
+                "government officer, artist"
+            )
         )
-    
+
     skills_to_learn = list(set(required_skills) - set(current_skills))
 
     return render_template(
@@ -171,7 +181,10 @@ def recommend_ui():
     )
 
 # ---------------------------------
-# Run server
+# Run server (Render-compatible)
 # ---------------------------------
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000))
+    )
